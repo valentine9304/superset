@@ -13,11 +13,13 @@ def register_blueprints(app):
     register_routes(app)
 
 
-def create_app():
+def create_app(with_routes=True):
+    from . import models
     app = Flask(__name__)
     app.config.from_object('config.Config')
 
     register_extensions(app)
-    register_blueprints(app)
+    if with_routes:
+        register_blueprints(app)
 
     return app
