@@ -1,26 +1,25 @@
 import time
 from functools import wraps
 from hashlib import md5
-from flask import request
+
 
 cache = {}
 
 CACHE_TIMEOUT = 5 * 60
 
 
+def generate_cache_key(key_prefix, extra=""):
+    key = key_prefix + extra
+    return md5(key.encode('utf-8')).hexdigest()
+
+
 def cache_result(key_prefix):
-    """Декоратор для кэширования результа запроса. Если направляется тот же
-    самый запрос в течение 5 минут, то данные беруться из кэша."""
+    """Декоратор для кэширования результата запроса."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            request_args = request.args
-            cache_key = key_prefix
-
-            if request_args:
-                cache_key += f"{request_args.get('start_date')}_{request_args.get('end_date')}_{request_args.get('limit', 'default')}"
-
-            cache_key = md5(cache_key.encode('utf-8')).hexdigest()
+            extra = kwargs.get('id', '')
+            cache_key = generate_cache_key(key_prefix, str(extra))
 
             cached_data = cache.get(cache_key)
             if cached_data:
@@ -35,3 +34,21 @@ def cache_result(key_prefix):
             return result
         return wrapper
     return decorator
+
+
+def clear_cache_key(key_prefix, extra=""):
+    """Удаляет конкретный кэш по точному ключу."""
+    cache_key = generate_cache_key(key_prefix, extra)
+    if cache_key in cache:
+        del cache[cache_key]
+        print(f"Cleared cache for key: {key_prefix} {extra}")
+    else:
+        print(f"No cache found for key: {key_prefix} {extra}")
+
+
+def clear_cache_by_prefix(key_prefix):
+    """Удалить все кэшированные записи по префиксу."""
+    keys_to_delete = [key for key in cache if key.startswith(md5(key_prefix.encode('utf-8')).hexdigest()[:8])]
+    for key in keys_to_delete:
+        del cache[key]
+    print(f"Cleared {len(keys_to_delete)} cache entries with prefix '{key_prefix}'")

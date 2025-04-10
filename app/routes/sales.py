@@ -1,7 +1,5 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from sqlalchemy import func
-from datetime import datetime
 
 from app.utils.cache import cache_result
 from app.repositories.sales import SaleRepository

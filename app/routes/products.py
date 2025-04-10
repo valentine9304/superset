@@ -1,8 +1,7 @@
 from flask import request, abort
 from flask_restx import Namespace, Resource, fields
 
-from app.models import Category
-from app.utils.cache import cache_result
+from app.utils.cache import cache_result, clear_cache_by_prefix, clear_cache_key
 from app.repositories.product import ProductRepository
 from app.validators.product import ProductSchema
 
@@ -33,6 +32,7 @@ class ProductList(Resource):
             return {'errors': errors}, 400
 
         ProductRepository.create(data)
+        clear_cache_by_prefix('all_products_cache')
         return {'message': 'Product created successfully'}, 201
 
 
@@ -61,6 +61,10 @@ class ProductResource(Resource):
             return {'errors': errors}, 400
 
         ProductRepository.update(product, data)
+
+        clear_cache_key('product_cache', str(id))
+        clear_cache_by_prefix('all_products_cache')
+
         return {'message': 'Product updated successfully'}
 
     def delete(self, id):
@@ -68,6 +72,10 @@ class ProductResource(Resource):
         product = ProductRepository.get_by_id(id)
         if not product:
             abort(404, description="Product with the given ID does not exist.")
-        ProductRepository.delete(product)
-        return {'message': 'Product deleted successfully'}
 
+        ProductRepository.delete(product)
+
+        clear_cache_key('product_cache', str(id))
+        clear_cache_by_prefix('all_products_cache')
+
+        return {'message': 'Product deleted successfully'}
