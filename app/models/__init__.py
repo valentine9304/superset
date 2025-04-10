@@ -1,1 +1,3 @@
-from .products import Category, Product, Sale
+from .product import Product
+from .sale import Sale
+from .category import Category

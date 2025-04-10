@@ -15,7 +15,7 @@ def register_blueprints(app):
 
 
 def create_app(with_routes=True):
-    from .models import products
+    from .models import product, category, sale
     app = Flask(__name__)
     app.config.from_object('config.Config')
 

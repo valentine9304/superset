@@ -3,7 +3,8 @@ from flask_restx import Namespace, Resource, fields
 from sqlalchemy import func
 from datetime import datetime
 
-from app.models.products import Sale, Product, db
+from app import db
+from app.models import Sale, Product
 from app.utils.cache import cache_result
 
 ns = Namespace('sales', description='Sales methods')

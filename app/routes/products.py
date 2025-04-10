@@ -1,7 +1,8 @@
 from flask import request, abort
 from flask_restx import Namespace, Resource, fields
 
-from app.models.products import Product, Category, db
+from app import db
+from app.models import Product, Category
 from app.utils.cache import cache_result
 
 ns = Namespace('products', description='Products methods')
