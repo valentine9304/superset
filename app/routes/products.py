@@ -3,10 +3,10 @@ from flask_restx import Namespace, Resource, fields
 
 from app.models import Category
 from app.utils.cache import cache_result
-from app.repositories.product_repository import ProductRepository
+from app.repositories.product import ProductRepository
+from app.validators.product import ProductSchema
 
 ns = Namespace('products', description='Products methods')
-
 product_model = ns.model('Product', {
     'id': fields.Integer(readonly=True, description='Product ID'),
     'name': fields.String(required=True, description='Product name'),
@@ -27,10 +27,10 @@ class ProductList(Resource):
     def post(self):
         """Создать новый продукт"""
         data = request.json
-
-        validation_error = validate_product_data(data)
-        if validation_error:
-            return validation_error
+        schema = ProductSchema()
+        errors = schema.validate(data)
+        if errors:
+            return {'errors': errors}, 400
 
         ProductRepository.create(data)
         return {'message': 'Product created successfully'}, 201
@@ -55,9 +55,10 @@ class ProductResource(Resource):
             abort(404, description="Product with the given ID does not exist.")
 
         data = request.json
-        validation_error = validate_product_data(data)
-        if validation_error:
-            return validation_error
+        schema = ProductSchema()
+        errors = schema.validate(data)
+        if errors:
+            return {'errors': errors}, 400
 
         ProductRepository.update(product, data)
         return {'message': 'Product updated successfully'}
@@ -70,16 +71,3 @@ class ProductResource(Resource):
         ProductRepository.delete(product)
         return {'message': 'Product deleted successfully'}
 
-
-def validate_product_data(data):
-    category = Category.query.get(data.get("category_id"))
-    if not category:
-        return {'error': 'Category ID does not exist.'}, 400
-
-    if data.get("price", 0) <= 0:
-        return {'error': 'Price must be greater than 0.'}, 400
-
-    if not isinstance(data.get("name"), str) or not data.get("name").strip():
-        return {'error': 'Name must be a non-empty string.'}, 400
-
-    return None

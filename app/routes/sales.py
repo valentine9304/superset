@@ -4,10 +4,10 @@ from sqlalchemy import func
 from datetime import datetime
 
 from app.utils.cache import cache_result
-from app.repositories.sales_repository import SaleRepository
+from app.repositories.sales import SaleRepository
+from app.validators.sales import SaleDateSchema
 
 ns = Namespace('sales', description='Sales methods')
-
 sale_model = ns.model('Sale', {
     'product_id': fields.Integer(required=True, description='Product ID'),
     'quantity': fields.Integer(required=True, description='Quantity sold'),
@@ -36,19 +36,20 @@ class SalesTotal(Resource):
     @cache_result('total_products_cache')
     def get(self):
         """Возвращает общую сумму продаж за указанный период c учётом скидок"""
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        data = {
+            "start_date": request.args.get('start_date'),
+            "end_date": request.args.get('end_date')
+        }
+        schema = SaleDateSchema()
+        errors = schema.validate(data)
+        if errors:
+            return {'errors': errors}, 400
 
-        if not start_date or not end_date:
-            return {'error': 'Both start_date and end_date must be provided'}, 400
-
-        start_date, end_date, error = parse_dates(start_date, end_date)
-        if error:
-            return error, 400
+        start_date = SaleDateSchema.parse_date(data['start_date'])
+        end_date = SaleDateSchema.parse_date(data['end_date'])
 
         total_sales = SaleRepository.get_total_sales(start_date, end_date)
-
-        return {'total_sales': round(total_sales, 2) or 0}
+        return {'total_sales': round(total_sales, 2) if total_sales else 0}
 
 
 @ns.route('/top-products')
@@ -80,19 +81,20 @@ class TopProducts(Resource):
     def get(self):
         """Возвращает топ-N самых продаваемых товаров за указанный период.
         Фильтрует по количеству продаж и показывает общую сумму по цене c учётом скидок."""
-        start_date = request.args.get("start_date")
-        end_date = request.args.get('end_date')
+        data = {
+            "start_date": request.args.get('start_date'),
+            "end_date": request.args.get('end_date')
+        }
+        schema = SaleDateSchema()
+        errors = schema.validate(data)
+        if errors:
+            return {'errors': errors}, 400
+
         limit = request.args.get('limit', default=5, type=int)
-
-        if not start_date or not end_date:
-            return {'error': 'Both start_date and end_date must be provided'}, 400
-
-        start_date, end_date, error = parse_dates(start_date, end_date)
-        if error:
-            return error, 400
+        start_date = SaleDateSchema.parse_date(data['start_date'])
+        end_date = SaleDateSchema.parse_date(data['end_date'])
 
         top_products = SaleRepository.get_top_products(start_date, end_date, limit)
-
         return [
             {
                 "product_name": product.name,
@@ -101,19 +103,3 @@ class TopProducts(Resource):
             }
             for product in top_products
         ]
-
-
-def parse_dates(start_date_str, end_date_str):
-    try:
-        start_date = datetime.strptime(start_date_str, '%d.%m.%Y')
-        end_date = datetime.strptime(end_date_str, '%d.%m.%Y')
-    except ValueError:
-        return None, None, {'error': 'Invalid date format. Use DD.MM.YYYY.'}
-
-    if start_date > end_date:
-        return None, None, {'error': 'Start date cannot be later than end date.'}
-
-    if end_date > datetime.today():
-        return None, None, {'error': 'End date cannot be later than today.'}
-
-    return start_date, end_date, None
