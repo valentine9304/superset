@@ -36,7 +36,7 @@ class SalesTotal(Resource):
     )
     @cache_result('total_products_cache')
     def get(self):
-        """Возвращает общую сумму продаж за указанный период"""
+        """Возвращает общую сумму продаж за указанный период c учётом скидок"""
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
@@ -49,7 +49,7 @@ class SalesTotal(Resource):
 
         total_sales = (
             db.session.query(
-                func.sum(Sale.quantity * Product.price).label("total_sales")
+                func.sum(Sale.total_price).label("total_sales")
             )
             .join(Product)
             .filter(Sale.date >= start_date, Sale.date <= end_date)
@@ -87,7 +87,7 @@ class TopProducts(Resource):
     @cache_result('top_products_cache')
     def get(self):
         """Возвращает топ-N самых продаваемых товаров за указанный период.
-        Фильтрует по количеству продаж и показывает общую сумму по цене"""
+        Фильтрует по количеству продаж и показывает общую сумму по цене c учётом скидок."""
         start_date = request.args.get("start_date")
         end_date = request.args.get('end_date')
         limit = request.args.get('limit', default=5, type=int)
@@ -103,7 +103,7 @@ class TopProducts(Resource):
             db.session.query(
                 Product.name,
                 func.sum(Sale.quantity).label("total_sold"),
-                func.sum(Sale.quantity * Product.price).label("total_revenue")
+                func.sum(Sale.total_price).label("total_price")
             )
             .join(Sale)
             .filter(Sale.date >= start_date, Sale.date <= end_date)
@@ -117,7 +117,7 @@ class TopProducts(Resource):
             {
                 "product_name": product.name,
                 "total_sold": product.total_sold,
-                "total_revenue": round(product.total_revenue, 2),
+                "total_price": round(product.total_price, 2),
             }
             for product in top_products
         ]

@@ -41,11 +41,13 @@ def data_migration():
                 days_ago = random.randint(0, 180)
                 sale_date = datetime.now() - timedelta(days=days_ago)
                 quantity = random.randint(1, 5)
+                discount = round(random.uniform(0, 0.5), 2)
 
                 sale = Sale(
                     product_id=product.id,
                     quantity=quantity,
-                    date=sale_date.date()
+                    date=sale_date.date(),
+                    discount=discount
                 )
                 db.session.add(sale)
 
