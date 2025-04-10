@@ -3,9 +3,8 @@ from flask_restx import Namespace, Resource, fields
 from sqlalchemy import func
 from datetime import datetime
 
-from app import db
-from app.models import Sale, Product
 from app.utils.cache import cache_result
+from app.repositories.sales_repository import SaleRepository
 
 ns = Namespace('sales', description='Sales methods')
 
@@ -47,14 +46,7 @@ class SalesTotal(Resource):
         if error:
             return error, 400
 
-        total_sales = (
-            db.session.query(
-                func.sum(Sale.total_price).label("total_sales")
-            )
-            .join(Product)
-            .filter(Sale.date >= start_date, Sale.date <= end_date)
-            .scalar()
-        )
+        total_sales = SaleRepository.get_total_sales(start_date, end_date)
 
         return {'total_sales': round(total_sales, 2) or 0}
 
@@ -99,19 +91,7 @@ class TopProducts(Resource):
         if error:
             return error, 400
 
-        top_products = (
-            db.session.query(
-                Product.name,
-                func.sum(Sale.quantity).label("total_sold"),
-                func.sum(Sale.total_price).label("total_price")
-            )
-            .join(Sale)
-            .filter(Sale.date >= start_date, Sale.date <= end_date)
-            .group_by(Product.id)
-            .order_by(func.sum(Sale.quantity).desc())
-            .limit(limit)
-            .all()
-        )
+        top_products = SaleRepository.get_top_products(start_date, end_date, limit)
 
         return [
             {

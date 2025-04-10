@@ -1,9 +1,9 @@
 from flask import request, abort
 from flask_restx import Namespace, Resource, fields
 
-from app import db
-from app.models import Product, Category
+from app.models import Category
 from app.utils.cache import cache_result
+from app.repositories.product_repository import ProductRepository
 
 ns = Namespace('products', description='Products methods')
 
@@ -21,8 +21,7 @@ class ProductList(Resource):
     @cache_result('all_products_cache')
     def get(self):
         """Получить список всех продуктов"""
-        products = Product.query.all()
-        return products
+        return ProductRepository.get_all()
 
     @ns.expect(product_model)
     def post(self):
@@ -33,11 +32,7 @@ class ProductList(Resource):
         if validation_error:
             return validation_error
 
-        product = Product(
-            name=data["name"], category_id=data["category_id"], price=data["price"]
-        )
-        db.session.add(product)
-        db.session.commit()
+        ProductRepository.create(data)
         return {'message': 'Product created successfully'}, 201
 
 
@@ -47,7 +42,7 @@ class ProductResource(Resource):
     @cache_result('product_cache')
     def get(self, id):
         """Получить продукт по ID"""
-        product = Product.query.get(id)
+        product = ProductRepository.get_by_id(id)
         if not product:
             abort(404, description="Product with the given ID does not exist.")
         return product
@@ -55,7 +50,7 @@ class ProductResource(Resource):
     @ns.expect(product_model)
     def put(self, id):
         """Обновить продукт по ID"""
-        product = Product.query.get(id)
+        product = ProductRepository.get_by_id(id)
         if not product:
             abort(404, description="Product with the given ID does not exist.")
 
@@ -64,20 +59,15 @@ class ProductResource(Resource):
         if validation_error:
             return validation_error
 
-        product.name = data.get('name', product.name)
-        product.price = data.get('price', product.price)
-        product.category_id = data.get('category_id', product.category_id)
-
-        db.session.commit()
+        ProductRepository.update(product, data)
         return {'message': 'Product updated successfully'}
 
     def delete(self, id):
         """Удалить продукт по ID"""
-        product = Product.query.get_or_404(id)
+        product = ProductRepository.get_by_id(id)
         if not product:
             abort(404, description="Product with the given ID does not exist.")
-        db.session.delete(product)
-        db.session.commit()
+        ProductRepository.delete(product)
         return {'message': 'Product deleted successfully'}
 
 
