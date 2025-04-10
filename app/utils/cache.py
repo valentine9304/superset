@@ -1,6 +1,7 @@
 import time
 from functools import wraps
 from hashlib import md5
+from flask import request
 
 
 cache = {}
@@ -18,7 +19,10 @@ def cache_result(key_prefix):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            request_args = request.args
             extra = kwargs.get('id', '')
+            if request_args:
+                extra += f"{request_args.get('start_date')}_{request_args.get('end_date')}_{request_args.get('limit', 'default')}"
             cache_key = generate_cache_key(key_prefix, str(extra))
 
             cached_data = cache.get(cache_key)

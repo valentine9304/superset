@@ -10,7 +10,7 @@ def register_extensions(app):
 
 
 def register_blueprints(app):
-    from .routes import register_routes
+    from .resources import register_routes
     register_routes(app)
 
 

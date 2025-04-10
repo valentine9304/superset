@@ -1,7 +1,7 @@
 from sqlalchemy import func
 
 from app import db
-from .product import Product
+from . import Product
 
 
 class Sale(db.Model):
